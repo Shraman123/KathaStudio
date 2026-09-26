@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+import sys
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -20,11 +21,13 @@ import typer
 
 from . import adapt as adapt_mod
 from . import render as render_mod
+from . import report as report_mod
 from . import script as script_mod
 from . import stitch as stitch_mod
 from . import voices as voices_mod
 from .config import Config, ConfigError, load_config, load_env, mask
 from .log import setup_logging
+from .models import Adaptation
 from .runs import RunDir
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help=__doc__)
@@ -54,6 +57,10 @@ def main(
     config: Path = typer.Option(None, "--config", help="Path to config.yaml"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ):
+    # Windows consoles default to cp1252; stories and scripts contain Bengali/Devanagari and symbols
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     setup_logging(verbose)
     load_env()
     try:
@@ -134,7 +141,20 @@ def render(
     """Stages 5-7: synthesize, stitch and write the report."""
     run = RunDir(run_dir)
     _run("render", render_mod.render, run, state.cfg, max_scenes=max_scenes)
-    _run("stitch", stitch_mod.stitch, run, state.cfg)
+    stitched = _run("stitch", stitch_mod.stitch, run, state.cfg)
+    report = _run("report", report_mod.write_report, run, state.cfg, stitched)
+    typer.secho(f"episode: {stitched['mp3'] or stitched['wav']}  ({stitched['seconds']:.1f}s)", fg="green")
+    typer.echo(f"report:  {report}")
+
+
+def _adaptation_matches(run: RunDir, culture: str, lang: str) -> bool:
+    if not run.adaptation.exists():
+        return False
+    try:
+        a = Adaptation.model_validate_json(run.adaptation.read_text(encoding="utf-8"))
+    except ValueError:
+        return False
+    return a.culture == culture and a.lang == lang
 
 
 @app.command("all")
@@ -147,11 +167,22 @@ def all_(
     max_scenes: Optional[int] = typer.Option(None, min=1),
     narrator_clip: Optional[Path] = typer.Option(None),
     consent_clip: Optional[Path] = typer.Option(None),
+    force: bool = typer.Option(False, help="Redo the adapt/script stages even if their output exists"),
 ):
-    """Run the whole pipeline end to end."""
-    adapt(story, culture, lang, llm)
-    run_dir = RunDir.for_story(state.cfg.paths.runs_dir, story).root
-    script(run_dir, llm)
+    """Run the whole pipeline end to end. Stages whose output already exists are reused (saves quota)."""
+    run = RunDir.for_story(state.cfg.paths.runs_dir, story)
+    want_culture = culture or state.cfg.defaults.culture
+    want_lang = lang.value if lang else state.cfg.defaults.lang
+    redo = force or not _adaptation_matches(run, want_culture, want_lang)
+    if redo:
+        adapt(story, culture, lang, llm)
+    else:
+        typer.echo(f"[adapt] reusing {run.adaptation} (use --force to redo)")
+    if redo or not run.script.exists():
+        script(run.root, llm)
+    else:
+        typer.echo(f"[script] reusing {run.script} (use --force to redo)")
+    run_dir = run.root
     if dry_run:
         _run("estimate", render_mod.estimate, RunDir(run_dir), state.cfg, max_scenes=max_scenes)
         return

@@ -48,10 +48,12 @@ def test_slug_and_run_layout(tmp_path):
         run.require(run.adaptation, "adapt")
 
 
-def test_cli_stub_exits_cleanly(tmp_path):
-    story = tmp_path / "s.txt"
-    story.write_text("Once upon a time.")
-    r = runner.invoke(app, ["adapt", str(story)])
+def test_cli_stub_exits_cleanly(tmp_path, monkeypatch):
+    import katha.stitch as stitch_mod
+    monkeypatch.setattr(stitch_mod, "stitch", lambda *a, **k: (_ for _ in ()).throw(NotImplementedError("M4")))
+    import katha.render as render_mod
+    monkeypatch.setattr(render_mod, "render", lambda *a, **k: (_ for _ in ()).throw(NotImplementedError("M3")))
+    r = runner.invoke(app, ["render", str(tmp_path)])
     assert r.exit_code == 2
     assert "not implemented yet" in r.output
 

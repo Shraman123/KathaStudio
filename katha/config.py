@@ -28,7 +28,8 @@ class Defaults(BaseModel):
 class LLMConfig(BaseModel):
     provider: Literal["gemini", "claude"] = "gemini"
     gemini_model: str = "gemini-3.8-flash"
-    claude_model: str = "claude-opus-5-5"
+    gemini_fallback_models: list[str] = ["gemini-3.1-flash-lite"]
+    claude_model: str = "claude-opus-5"
     temperature: float = 0.7
     max_chunk_words: int = Field(2500, gt=100)
 
@@ -63,6 +64,11 @@ class PricingConfig(BaseModel):
     audio_tokens_per_second: float = 25
     models: dict[str, ModelPrice] = {}
     free_tier: bool = True
+    free_tier_rpd: dict[str, int] = {}  # known free-tier requests/day per model
+
+
+class EstimateConfig(BaseModel):
+    words_per_minute: dict[str, float] = {"en": 150, "hi": 140, "bn": 130}
 
 
 class PathsConfig(BaseModel):
@@ -76,6 +82,7 @@ class Config(BaseModel):
     rate_limit: RateLimitConfig = RateLimitConfig()
     stitch: StitchConfig = StitchConfig()
     pricing: PricingConfig = PricingConfig()
+    estimate: EstimateConfig = EstimateConfig()
     paths: PathsConfig = PathsConfig()
 
     def price_for(self, model: str) -> ModelPrice:

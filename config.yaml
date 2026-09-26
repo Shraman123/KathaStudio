@@ -8,7 +8,10 @@ defaults:
 llm:
   provider: gemini         # gemini | claude  (overridden by --llm)
   gemini_model: gemini-3.8-flash
-  claude_model: claude-opus-5-5
+  # Free tier for gemini-3.8-flash is only 20 requests/day (seen in a 429 on 2026-09-26).
+  # When a model's daily quota runs out, the pipeline moves to the next model in this list.
+  gemini_fallback_models: [gemini-3.1-flash-lite]
+  claude_model: claude-opus-5
   temperature: 0.7
   max_chunk_words: 2500    # the ingest stage splits stories into chunks of about this size
 
@@ -40,6 +43,13 @@ pricing:
     gemini-3.8-flash-lite-tts: {input: 0.50, output: 6.00}
     gemini-3.8-flash:          {input: 0.75, output: 3.75}
   free_tier: true            # set to false if billing is enabled on your key
+  # Free-tier requests/day. Only numbers we have actually observed; the docs don't publish them.
+  # gemini-3.8-flash: 20/day (from a 429 error message, 2026-09-26). Add TTS once known.
+  free_tier_rpd:
+    gemini-3.8-flash: 20
+
+estimate:
+  words_per_minute: {en: 150, hi: 140, bn: 130}   # speaking rate used by --dry-run
 
 paths:
   runs_dir: runs

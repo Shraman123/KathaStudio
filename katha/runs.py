@@ -1,6 +1,7 @@
 """Run-directory layout. Each stage reads and writes files here, so any stage can be rerun."""
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -63,3 +64,10 @@ class RunDir:
                 f"Missing {path.name} in {self.root}. Run `katha {produced_by}` first."
             )
         return path
+
+
+def write_json(path: Path, model) -> None:
+    """Write a pydantic model atomically, so a crash never leaves half a file."""
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(model.model_dump(mode="json"), ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)

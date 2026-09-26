@@ -30,3 +30,13 @@ def setup_logging(verbose: bool = False) -> None:
 def kv(**fields) -> dict:
     """Usage: log.info("chunk rendered", extra=kv(scene=3, secs=4.2))"""
     return {"kv": fields}
+
+
+# The SDK warns whenever both GOOGLE_API_KEY and GEMINI_API_KEY are set, even though an
+# explicit api_key (which we always pass) takes precedence. Silence that one warning.
+class _DropBothKeysWarning(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "Both GOOGLE_API_KEY and GEMINI_API_KEY" not in record.getMessage()
+
+
+logging.getLogger("google_genai._api_client").addFilter(_DropBothKeysWarning())

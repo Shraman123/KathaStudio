@@ -5,3 +5,4 @@ __pycache__/
 runs/
 .pytest_cache/
 *.egg-info/
+runs_m2.log

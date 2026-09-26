@@ -36,6 +36,7 @@ class LLMConfig(BaseModel):
 
 class TTSConfig(BaseModel):
     model: str = "gemini-3.8-flash-tts"
+    fallback_models: list[str] = ["gemini-3.8-flash-lite-tts"]
     voice_mode: Literal["designed", "prebuilt"] = "designed"
     narrator_prebuilt_voice: str = "Charon"
     sample_rate: int = 24000

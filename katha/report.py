@@ -44,9 +44,19 @@ def build_report(run: RunDir, cfg: Config, stitched: dict | None = None) -> str:
     # ---- cost ----
     tts_price = cfg.price_for(cfg.tts.model)
     audio_tokens = int(seconds * cfg.pricing.audio_tokens_per_second)
+    # Chunks may come from different TTS models (fallback on quota). Price each model's share of the audio.
+    chunk_models = stats.get("models") or {k: cfg.tts.model for k in stats["keys"]}
+    manifest = json.loads((run.audio_dir / "manifest.json").read_text(encoding="utf-8"))
+    share: dict[str, float] = defaultdict(float)
+    for k, m in chunk_models.items():
+        share[m] += manifest.get(k, {}).get("seconds", 0)
+    total_share = sum(share.values()) or 1
+    audio_cost = sum(seconds * (v / total_share) * cfg.pricing.audio_tokens_per_second / 1e6
+                     * cfg.price_for(m).output for m, v in share.items())
+    fallback_keys = [k for k, m in chunk_models.items() if m != cfg.tts.model]
     chars = sum(len(ln.text) + len(ln.style) for s in scenes for ln in s.lines)
     tts_in_tokens = int(chars / (4 if script.lang == "en" else 2.5))
-    tts_cost = audio_tokens / 1e6 * tts_price.output + tts_in_tokens / 1e6 * tts_price.input
+    tts_cost = audio_cost + tts_in_tokens / 1e6 * tts_price.input
     llm_rows, llm_cost, llm_unpriced = [], 0.0, []
     for model, u in _llm_usage(run.root / "llm_usage.jsonl").items():
         price = cfg.pricing.models.get(model)
@@ -97,7 +107,7 @@ adaptation LLM `{adaptation.llm}` · TTS `{cfg.tts.model}` ({cfg.tts.voice_mode}
 |---|---|
 | Duration | **{_fmt_secs(seconds)}** |
 | Scenes / lines | {len(scenes)} / {sum(len(s.lines) for s in scenes)} |
-| Audio chunks | {tts_requests} |
+| Audio chunks | {tts_requests}{f" ({len(fallback_keys)} on fallback `{', '.join(sorted(set(chunk_models[k] for k in fallback_keys)))}`; redo with `katha render --upgrade`)" if fallback_keys else ""} |
 | Files | `episode.wav`{" · `episode.mp3`" if (stitched or {}).get("mp3") else " (MP3 skipped: ffmpeg not installed)"} |
 
 | Scene | Title | Lines |
@@ -133,7 +143,7 @@ adaptation LLM `{adaptation.llm}` · TTS `{cfg.tts.model}` ({cfg.tts.voice_mode}
 
 | Item | Basis | Paid-tier cost |
 |---|---|---|
-| TTS audio output | {_fmt_secs(seconds)} × {cfg.pricing.audio_tokens_per_second:g} tok/s = {audio_tokens:,} tok × ${tts_price.output}/1M | ${audio_tokens / 1e6 * tts_price.output:.4f} |
+| TTS audio output | {_fmt_secs(seconds)} × {cfg.pricing.audio_tokens_per_second:g} tok/s = {audio_tokens:,} tok, priced per model | ${audio_cost:.4f} |
 | TTS text input | ≈{tts_in_tokens:,} tok × ${tts_price.input}/1M | ${tts_in_tokens / 1e6 * tts_price.input:.4f} |
 | Adaptation + script LLM | token usage above | ${llm_cost:.4f}{" (+ unpriced: " + ", ".join(llm_unpriced) + ")" if llm_unpriced else ""} |
 | **Total** | | **${tts_cost + llm_cost:.4f}** |

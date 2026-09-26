@@ -41,7 +41,7 @@ haren               I almost did not enter. It did not feel right, winning again
 protima             Dadu would have hated that, Haren. He loved watching you lose!
 ```
 
-**Audio.** 4 voices were cast (3 designed, 1 library) and 13 of the episode's 27 chunks are rendered: about 91 s of audio at 24 kHz mono. The rest is waiting on the free-tier daily TTS quota (see [costs](#costs--free-tier)); `katha render runs/the-last-pie` picks up where it stopped. As a spot check, Gemini transcribed two rendered chunks back to exactly the scripted lines.
+**Audio.** 4 voices were cast (3 designed, 1 library) and 24 of the episode's 30 chunks are rendered (11 on the lite TTS fallback): at 24 kHz mono. The rest is waiting on the free-tier daily TTS quota (see [costs](#costs--free-tier)); `katha render runs/the-last-pie` picks up where it stopped. As a spot check, Gemini transcribed two rendered chunks back to exactly the scripted lines.
 
 > **Studio UI.** The Gradio app (`katha ui`) was designed first on a Claude Design canvas. Its three columns follow the pipeline: **Story** (upload, culture, language, estimate) → **Adaptation** (change log, script, report) → **Cast & render** (voice cards with previews, render progress, player and downloads).
 
@@ -149,7 +149,8 @@ So a 30-minute episode costs about **$0.40** at paid rates. The pricing page say
 
 That shapes how the tool behaves:
 - A 750-word story needs **27 TTS requests with designed voices** but **11 with prebuilt voices**. `--dry-run` warns when a plan exceeds the daily quota and suggests prebuilt mode.
-- A daily-quota error is **not** retried (retrying can't help). The command exits with code 3, everything finished so far stays on disk, and rerunning it the next day resumes.
+- When the main TTS model's daily quota runs out, rendering continues on `gemini-3.8-flash-lite-tts` with the **same designed voices** (their ids work across both models). `report.md` lists the chunks that used the fallback, and `katha render --upgrade` re-renders them on the main model later.
+- A daily-quota error with no fallback left is **not** retried (retrying can't help). The quota looks like a rolling ~24 h window, not a midnight reset. The command exits with code 3, everything finished so far stays on disk, and rerunning it the next day resumes.
 - Per-minute limits and 5xx errors use exponential backoff with jitter and honour `Retry-After`. A client-side limiter spaces calls at `rate_limit.requests_per_minute`.
 
 ## Voice consent
@@ -168,7 +169,7 @@ Voice design for child characters is refused by Google's safety policy ("Voice p
 ## Tests
 
 ```bash
-pytest -q        # 55 tests, all APIs mocked, ~15 s
+pytest -q        # 57 tests, all APIs mocked
 ```
 
 The tests cover:
@@ -179,7 +180,7 @@ The tests cover:
 - resume and re-render
 - stitching (pause lengths, loudness matching)
 - cost maths from config
-- quota fallback
+- quota fallback (text and TTS), and `--upgrade`
 - report contents
 - the UI's HTML escaping
 

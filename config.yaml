@@ -17,6 +17,9 @@ llm:
 
 tts:
   model: gemini-3.8-flash-tts          # or gemini-3.8-flash-lite-tts
+  # When the main model's daily quota runs out, finish on these (same designed voices; separate quota).
+  # report.md lists which chunks used a fallback; `katha render --upgrade` redoes them on the main model.
+  fallback_models: [gemini-3.8-flash-lite-tts]
   voice_mode: designed                 # designed: one call per turn, custom voices
                                        # prebuilt: chunks of up to 2 speakers, prebuilt voices only
   narrator_prebuilt_voice: Charon      # fallback voice when design is unavailable

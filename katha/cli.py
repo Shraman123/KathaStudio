@@ -150,10 +150,11 @@ def voices(
 def render(
     run_dir: Path = typer.Argument(...),
     max_scenes: Optional[int] = typer.Option(None, min=1),
+    upgrade: bool = typer.Option(False, help="Re-render chunks made on a fallback TTS model with the main model"),
 ):
     """Stages 5-7: synthesize, stitch and write the report."""
     run = RunDir(run_dir)
-    _run("render", render_mod.render, run, state.cfg, max_scenes=max_scenes)
+    _run("render", render_mod.render, run, state.cfg, max_scenes=max_scenes, upgrade=upgrade)
     stitched = _run("stitch", stitch_mod.stitch, run, state.cfg)
     report = _run("report", report_mod.write_report, run, state.cfg, stitched)
     typer.secho(f"episode: {stitched['mp3'] or stitched['wav']}  ({stitched['seconds']:.1f}s)", fg="green")
@@ -190,7 +191,7 @@ def all_(
         _run("estimate", render_mod.estimate, RunDir(run_dir), state.cfg, max_scenes=max_scenes)
         return
     voices(run_dir, narrator_clip, consent_clip)
-    render(run_dir, max_scenes)
+    render(run_dir, max_scenes, False)
 
 
 @app.command()

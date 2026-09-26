@@ -30,7 +30,8 @@ class GeminiTTS:
         from google import genai
 
         self.cfg = cfg
-        self.model = cfg.tts.model
+        self.models = [cfg.tts.model, *cfg.tts.fallback_models]
+        self.model = self.models[0]
         self.client = genai.Client(api_key=require_key("GEMINI_API_KEY"))
         self.limiter = RateLimiter(cfg.rate_limit.requests_per_minute)
         self.calls = 0
@@ -38,6 +39,15 @@ class GeminiTTS:
     def _call(self, fn, what: str):
         self.calls += 1
         return call_with_retries(fn, self.cfg.rate_limit, self.limiter, what=what)
+
+    def fallback(self) -> bool:
+        """Switch to the next TTS model after a daily-quota error. Designed voice ids carry over
+        (verified live: a gemini-3.8-flash-tts voice works on gemini-3.8-flash-lite-tts)."""
+        idx = self.models.index(self.model) + 1
+        if idx >= len(self.models):
+            return False
+        self.model = self.models[idx]
+        return True
 
     # ---------- voices ----------
 

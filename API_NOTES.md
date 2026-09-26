@@ -108,3 +108,5 @@ client.voices.create(store=True, voice={
 - `voices.list(language_code=["en-IN"], gender=[…], type_=["prebuilt"])` returns library ids such as `en-in-advisor-1`.
 - TTS unary responses are WAV at 24 kHz, mono, 16-bit, as documented. 7 single-speaker requests took 5–60 s each. Gemini transcribed the rendered chunks back to exactly the scripted lines.
 - Designed voices sounded younger than described ("late 60s" came out like 30s), so the design prompt now leads with the age.
+- **Daily quotas don't reset at midnight US Pacific.** At 17:06 IST, well past the Pacific reset, both `gemini-3.8-flash` and `gemini-3.8-flash-tts` were still refusing with "per day" 429s. It looks like a rolling ~24 h window.
+- **Designed voice ids work across TTS models.** A voice created with `model: gemini-3.8-flash-tts` synthesised fine on `gemini-3.8-flash-lite-tts`, which has its own daily quota (about 10 requests). Katha uses this as an automatic TTS fallback. Gemini transcribed lite chunks back to the exact scripted lines, and it described the same character's voice similarly on both models.

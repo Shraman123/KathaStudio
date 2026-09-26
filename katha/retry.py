@@ -89,8 +89,9 @@ def call_with_retries(
         except Exception as e:  # noqa: BLE001 (we re-raise anything that isn't retryable)
             if is_daily_quota(e):
                 raise QuotaExhausted(
-                    f"{what}: daily free-tier quota exhausted. Wait for the reset (midnight "
-                    f"US Pacific), switch model in config.yaml, or enable billing. API said: {e}"
+                    f"{what}: free-tier daily quota exhausted. It did not reset at midnight US Pacific "
+                    f"in testing, so it looks like a rolling window: try again in a few hours, switch "
+                    f"model in config.yaml, or enable billing. API said: {e}"
                 ) from e
             if not is_retryable(e) or attempt >= cfg.max_retries:
                 raise

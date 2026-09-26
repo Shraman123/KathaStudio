@@ -1,0 +1,13 @@
+17:26:19 WARNING katha.render: TTS daily quota exhausted; continuing on the fallback model with the same voices from_model=gemini-3.8-flash-tts to_model=gemini-3.8-flash-lite-tts
+17:26:28 INFO  katha.render: chunk rendered n=15/30 key=scene_02_007 model=gemini-3.8-flash-lite-tts speakers=protima secs=10.8
+17:26:34 INFO  katha.render: chunk rendered n=16/30 key=scene_02_008 model=gemini-3.8-flash-lite-tts speakers=shom secs=2.0
+17:26:42 INFO  katha.render: chunk rendered n=17/30 key=scene_02_009 model=gemini-3.8-flash-lite-tts speakers=narrator secs=6.5
+17:26:51 INFO  katha.render: chunk rendered n=18/30 key=scene_02_010 model=gemini-3.8-flash-lite-tts speakers=shom secs=5.9
+17:27:31 INFO  katha.render: chunk rendered n=19/30 key=scene_03_000 model=gemini-3.8-flash-lite-tts speakers=narrator secs=16.1
+17:27:37 INFO  katha.render: chunk rendered n=20/30 key=scene_03_001 model=gemini-3.8-flash-lite-tts speakers=haren secs=3.1
+17:27:44 INFO  katha.render: chunk rendered n=21/30 key=scene_03_002 model=gemini-3.8-flash-lite-tts speakers=protima secs=1.6
+17:27:50 INFO  katha.render: chunk rendered n=22/30 key=scene_03_003 model=gemini-3.8-flash-lite-tts speakers=haren secs=5.8
+17:28:27 INFO  katha.render: chunk rendered n=23/30 key=scene_03_004 model=gemini-3.8-flash-lite-tts speakers=protima secs=5.5
+17:28:33 INFO  katha.render: chunk rendered n=24/30 key=scene_03_005 model=gemini-3.8-flash-lite-tts speakers=haren secs=4.1
+[render] tts:narrator: free-tier daily quota exhausted. It did not reset at midnight US Pacific in testing, so it looks like a rolling window: try again in a few hours, switch model in config.yaml, or enable billing.
+Everything finished so far is saved. Rerun the same command later to resume.

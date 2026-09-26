@@ -157,28 +157,51 @@ def load_manifest(run: RunDir) -> dict:
 
 
 def render_script(run: RunDir, script: Script, cast: "VoiceCast", cfg: Config, tts,
-                  max_scenes: int | None = None, on_progress=None) -> dict:
-    """on_progress(done, total, key), if given, is called after each chunk (the UI uses it)."""
+                  max_scenes: int | None = None, on_progress=None, upgrade: bool = False) -> dict:
+    """Render every planned request that isn't already on disk and up to date.
+
+    on_progress(done, total, key), if given, is called after each chunk (the UI uses it).
+    If the primary TTS model's daily quota runs out, the rest render on tts.fallback_models
+    (same voice ids). The manifest records each chunk's model. `upgrade=True` re-renders
+    fallback chunks on the primary model.
+    """
+    from .retry import QuotaExhausted
+
     run.ensure()
+    primary = cfg.tts.model
+    allowed = [primary, *cfg.tts.fallback_models]
     reqs = plan_requests(script, cfg.tts.voice_mode, max_scenes)
     manifest = load_manifest(run)
     stats = {"requests": len(reqs), "synthesized": 0, "skipped": 0}
     scenes = {s.id: s for s in script.scenes}
     for n, req in enumerate(reqs, 1):
         out = run.audio_dir / f"{req.key}.wav"
-        fp = request_fingerprint(req, script, cast, cfg.tts.model)
         entry = manifest.get(req.key)
-        if entry and entry.get("fingerprint") == fp and wav_seconds(out):
-            stats["skipped"] += 1
-            if on_progress:
-                on_progress(n, len(reqs), req.key)
-            continue
+        if entry and wav_seconds(out):
+            made_with = entry.get("model", primary)
+            fresh = entry.get("fingerprint") == request_fingerprint(req, script, cast, made_with)
+            if fresh and made_with in allowed and not (upgrade and made_with != primary):
+                stats["skipped"] += 1
+                if on_progress:
+                    on_progress(n, len(reqs), req.key)
+                continue
         scene = scenes[req.scene_id]
         segments = [Segment(scene.lines[i].speaker, scene.lines[i].text, scene.lines[i].style)
                     for i in req.line_idx]
         voices = {sp: cast.voices[sp].voice for sp in req.speakers}
         multi = len(req.speakers) == 2
-        wav = tts.synthesize(segments, voices, multi_speaker=multi)
+        while True:
+            try:
+                wav = tts.synthesize(segments, voices, multi_speaker=multi)
+                break
+            except QuotaExhausted:
+                old = getattr(tts, "model", primary)
+                fallback = getattr(tts, "fallback", None)
+                if upgrade or not (fallback and fallback()):
+                    raise
+                log.warning("TTS daily quota exhausted; continuing on the fallback model with the same voices",
+                            extra=kv(from_model=old, to_model=tts.model))
+        model_used = getattr(tts, "model", primary)
         tmp = out.with_suffix(".part")
         tmp.write_bytes(wav)
         tmp.replace(out)
@@ -187,16 +210,19 @@ def render_script(run: RunDir, script: Script, cast: "VoiceCast", cfg: Config, t
             out.unlink(missing_ok=True)
             raise RuntimeError(f"{req.key}: the API returned audio that is not a valid WAV")
         manifest[req.key] = {"scene": req.scene_id, "lines": req.line_idx, "speakers": req.speakers,
-                             "fingerprint": fp, "seconds": round(secs, 2)}
+                             "model": model_used,
+                             "fingerprint": request_fingerprint(req, script, cast, model_used),
+                             "seconds": round(secs, 2)}
         _save_manifest(run, manifest)  # after every chunk, so a crash loses at most one
         stats["synthesized"] += 1
         if on_progress:
             on_progress(n, len(reqs), req.key)
-        log.info("chunk rendered", extra=kv(n=f"{n}/{len(reqs)}", key=req.key,
+        log.info("chunk rendered", extra=kv(n=f"{n}/{len(reqs)}", key=req.key, model=model_used,
                                            speakers="+".join(req.speakers), secs=f"{secs:.1f}"))
     # Keep only the keys in the current plan, in order
     stats["keys"] = [r.key for r in reqs]
     stats["seconds"] = sum(manifest[k]["seconds"] for k in stats["keys"])
+    stats["models"] = {k: manifest[k].get("model", primary) for k in stats["keys"]}
     return stats
 
 
@@ -207,7 +233,8 @@ def _save_manifest(run: RunDir, manifest: dict) -> None:
     tmp.replace(p)
 
 
-def render(run: RunDir, cfg: Config, *, max_scenes: int | None = None, tts=None, on_progress=None) -> dict:
+def render(run: RunDir, cfg: Config, *, max_scenes: int | None = None, tts=None, on_progress=None,
+           upgrade: bool = False) -> dict:
     from .voices import load_cast
 
     script = Script.model_validate_json(run.require(run.script, "script").read_text(encoding="utf-8"))
@@ -219,7 +246,7 @@ def render(run: RunDir, cfg: Config, *, max_scenes: int | None = None, tts=None,
     if tts is None:
         from .tts import GeminiTTS
         tts = GeminiTTS(cfg)
-    stats = render_script(run, script, cast, cfg, tts, max_scenes, on_progress)
+    stats = render_script(run, script, cast, cfg, tts, max_scenes, on_progress, upgrade)
     stats["max_scenes"] = max_scenes
     (run.root / "render_stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
     log.info("render done", extra=kv(synthesized=stats["synthesized"], skipped=stats["skipped"],

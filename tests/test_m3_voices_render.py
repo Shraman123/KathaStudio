@@ -172,3 +172,60 @@ def test_design_prompt_leads_with_age():
     c = ch("protima").model_copy(update={"age": "late 60s"})
     assert design_prompt(c).startswith("A female who sounds late 60s:")
     assert is_minor(ch("x").model_copy(update={"age": "12"})) and not is_minor(c)
+
+
+class QuotaTTS(FakeTTS):
+    """Primary model runs out of quota after `ok` calls; the fallback model keeps working."""
+
+    def __init__(self, ok=2, fallbacks=("lite",)):
+        super().__init__()
+        self.models = ["main", *fallbacks]
+        self.model = "main"
+        self.ok = ok
+
+    def fallback(self):
+        i = self.models.index(self.model) + 1
+        if i >= len(self.models):
+            return False
+        self.model = self.models[i]
+        return True
+
+    def synthesize(self, segments, voices, multi_speaker):
+        from katha.retry import QuotaExhausted
+        if self.model == "main":
+            if self.ok <= 0:
+                raise QuotaExhausted("daily")
+            self.ok -= 1
+        return super().synthesize(segments, voices, multi_speaker)
+
+
+def test_tts_quota_falls_back_and_upgrade_redoes_only_fallback_chunks(run, cfg):
+    import json as _j
+    cfg.tts.fallback_models = ["lite"]
+    cfg.tts.model = "main"
+    cfg.pricing.models["main"] = cfg.pricing.models["gemini-3.8-flash-tts"]
+    cfg.pricing.models["lite"] = cfg.pricing.models["gemini-3.8-flash-lite-tts"]
+    cast_voices(run, cfg, tts=FakeTTS())
+    tts = QuotaTTS(ok=2)
+    stats = render(run, cfg, tts=tts)
+    assert stats["synthesized"] == 6
+    models = list(stats["models"].values())
+    assert models[:2] == ["main", "main"] and set(models[2:]) == {"lite"}
+
+    again = render(run, cfg, tts=QuotaTTS(ok=0))          # fallback chunks count as done
+    assert again["synthesized"] == 0
+
+    up = QuotaTTS(ok=10)
+    stats3 = render(run, cfg, tts=up, upgrade=True)       # only the 4 lite chunks are redone on main
+    assert stats3["synthesized"] == 4 and set(stats3["models"].values()) == {"main"}
+    man = _j.loads((run.audio_dir / "manifest.json").read_text())
+    assert all(v["model"] == "main" for v in man.values())
+
+
+def test_quota_without_fallback_still_stops_cleanly(run, cfg):
+    from katha.retry import QuotaExhausted
+    cfg.tts.fallback_models = []
+    cast_voices(run, cfg, tts=FakeTTS())
+    with pytest.raises(QuotaExhausted):
+        render(run, cfg, tts=QuotaTTS(ok=1, fallbacks=()))
+    assert len(list(run.audio_dir.glob("*.wav"))) == 1      # the finished chunk is kept for resume

@@ -29,7 +29,6 @@ from .config import Config, ConfigError, load_config, load_env, mask
 from .llm import LLMOutputError
 from .log import setup_logging
 from .retry import QuotaExhausted
-from .models import Adaptation
 from .runs import RunDir
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help=__doc__)
@@ -161,16 +160,6 @@ def render(
     typer.echo(f"report:  {report}")
 
 
-def _adaptation_matches(run: RunDir, culture: str, lang: str) -> bool:
-    if not run.adaptation.exists():
-        return False
-    try:
-        a = Adaptation.model_validate_json(run.adaptation.read_text(encoding="utf-8"))
-    except ValueError:
-        return False
-    return a.culture == culture and a.lang == lang
-
-
 @app.command("all")
 def all_(
     story: Path = typer.Argument(...),
@@ -187,7 +176,7 @@ def all_(
     run = RunDir.for_story(state.cfg.paths.runs_dir, story)
     want_culture = culture or state.cfg.defaults.culture
     want_lang = lang.value if lang else state.cfg.defaults.lang
-    redo = force or not _adaptation_matches(run, want_culture, want_lang)
+    redo = force or not adapt_mod.adaptation_matches(run, want_culture, want_lang)
     if redo:
         adapt(story, culture, lang, llm)
     else:
@@ -202,6 +191,17 @@ def all_(
         return
     voices(run_dir, narrator_clip, consent_clip)
     render(run_dir, max_scenes)
+
+
+@app.command()
+def ui(port: int = typer.Option(7860), share: bool = typer.Option(False, help="Public gradio.live link")):
+    """Launch the Gradio studio UI."""
+    try:
+        from .ui import launch
+    except ImportError:
+        typer.secho("The UI needs gradio: pip install -e .[ui]", fg="red", err=True)
+        raise typer.Exit(1)
+    launch(port=port, share=share)
 
 
 @app.command()

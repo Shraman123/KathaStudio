@@ -119,3 +119,14 @@ def adapt(story: Path, run: RunDir, cfg: Config, *, culture: str, lang: str, llm
                                          bible=len(adaptation.bible)))
     return adaptation
 
+
+
+def adaptation_matches(run: RunDir, culture: str, lang: str) -> bool:
+    """True if this run already has an adaptation for the same culture and language (so we can reuse it)."""
+    if not run.adaptation.exists():
+        return False
+    try:
+        a = Adaptation.model_validate_json(run.adaptation.read_text(encoding="utf-8"))
+    except ValueError:
+        return False
+    return a.culture == culture and a.lang == lang

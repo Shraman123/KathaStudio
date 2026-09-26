@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Katha Studio: adaptation, not translation</title>
+<meta name="description" content="Katha Studio turns an English story into a culturally adapted, fully voiced audio drama for Bengali listeners, using Gemini 3.8 Flash TTS with designed voices.">
+<meta property="og:title" content="Katha Studio: adaptation, not translation">
+<meta property="og:description" content="A Vermont pie contest becomes a nolen gurer payesh rivalry at Shantiniketan's Poush Mela. Same beats, new world, fully voiced.">
+<meta name="theme-color" content="#F6F1E7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23B8412C'/%3E%3Cpath d='M18 44c4-14 10-22 20-24M30 42c3-8 8-12 16-13' stroke='%23F6F1E7' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+Bengali:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F1E7; --paper-2:#EFE8DA; --card:#FFFFFF; --sand:#EDE4D3;
+  --ink:#1F1A17; --ink-2:#4A3F36; --ink-3:#6B5E52; --rule:#D9CDB8;
+  --accent:#B8412C; --accent-ink:#9E3522; --accent-soft:#F3E3DE;
+  --teal:#17494A; --teal-soft:#E3EEEC; --ochre:#6A4A0E; --ochre-soft:#F1E4C8;
+  --mark:#F6D9A8; --stage:#1F1A17; --stage-ink:#F6F1E7; --stage-dim:#CDBFA9; --stage-line:#3A322C;
+  --wave:#CFC3AF; --shadow:0 1px 0 rgba(31,26,23,.04),0 12px 32px -18px rgba(31,26,23,.25);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#1B1714; --paper-2:#231E1A; --card:#26201C; --sand:#2E2722;
+    --ink:#F2EBDF; --ink-2:#D5CABB; --ink-3:#A89A89; --rule:#3B332D;
+    --accent:#E0674E; --accent-ink:#F08A73; --accent-soft:#3A2520;
+    --teal:#8FCFCB; --teal-soft:#1D3433; --ochre:#E8C27A; --ochre-soft:#3A2F1C;
+    --mark:#5A4320; --stage:#110E0C; --stage-ink:#F2EBDF; --stage-dim:#A89A89; --stage-line:#2E2722;
+    --wave:#4A4038; --shadow:0 1px 0 rgba(0,0,0,.2),0 12px 32px -18px rgba(0,0,0,.6);
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 17px/1.6 'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent-ink)} a:hover{color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:600;letter-spacing:-.015em;line-height:1.1;margin:0}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.bn{font-family:'Noto Serif Bengali',serif;font-weight:600}
+code,pre{font-family:'IBM Plex Mono',ui-monospace,monospace}
+
+/* nav */
+nav{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+nav .wrap{display:flex;align-items:center;gap:16px;height:64px}
+.brand{display:flex;align-items:baseline;gap:10px;text-decoration:none;color:var(--ink)}
+.brand .bn{font-size:24px;color:var(--accent)}
+.brand b{font-family:'Fraunces',serif;font-size:20px;font-weight:600}
+nav .links{margin-left:auto;display:flex;gap:22px;align-items:center;font-size:15px}
+nav .links a{color:var(--ink-2);text-decoration:none}
+nav .links a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:10px;font-weight:600;font-size:15px;text-decoration:none;border:1px solid transparent;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff} .btn-primary:hover{background:var(--accent-ink);color:#fff}
+.btn-ghost{border-color:var(--ink);color:var(--ink);background:transparent} .btn-ghost:hover{background:var(--sand);color:var(--ink)}
+@media (max-width:720px){ nav .links a.hide-sm{display:none} }
+
+/* hero */
+.hero{padding:88px 0 40px}
+.hero h1{font-size:clamp(44px,7vw,84px);max-width:13ch}
+.hero h1 em{font-style:italic;color:var(--accent)}
+.hero p.lede{font-size:clamp(18px,2.2vw,21px);color:var(--ink-2);max-width:60ch;margin:24px 0 32px}
+.hero .ctas{display:flex;gap:12px;flex-wrap:wrap}
+.swap{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-top:48px;font-family:'Fraunces',serif}
+.swap s{color:var(--ink-3);font-size:22px;text-decoration-thickness:1px}
+.swap strong{font-size:30px;font-weight:600}
+.swap span{color:var(--ink-3)}
+
+/* player */
+.stage{background:var(--stage);color:var(--stage-ink);border-radius:20px;padding:28px;box-shadow:var(--shadow);margin-top:28px}
+.stage-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.play{width:64px;height:64px;border-radius:999px;border:0;background:var(--accent);color:#fff;display:grid;place-items:center;cursor:pointer;flex-shrink:0}
+.play:hover{background:var(--accent-ink)}
+.play:focus-visible,.line:focus-visible,.btn:focus-visible{outline:3px solid var(--mark);outline-offset:3px}
+.stage-title{display:flex;flex-direction:column}
+.stage-title b{font-family:'Fraunces',serif;font-size:22px;font-weight:600}
+.stage-title span{font-size:14px;color:var(--stage-dim)}
+.time{margin-left:auto;font:500 14px 'IBM Plex Mono',monospace;color:var(--stage-dim)}
+.wave{display:flex;align-items:center;gap:2px;height:72px;margin:22px 0 8px;cursor:pointer;touch-action:none}
+.wave i{flex:1;border-radius:2px;background:var(--stage-line);min-height:3px;transition:background .15s}
+.wave i.on{background:var(--accent)}
+.lines{display:grid;gap:4px;margin-top:14px}
+.line{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:10px 12px;border-radius:10px;border:0;background:transparent;color:var(--stage-dim);text-align:left;font:inherit;font-size:15px;line-height:1.5;cursor:pointer}
+.line:hover{background:rgba(255,255,255,.04)}
+.line.active{background:rgba(255,255,255,.07);color:var(--stage-ink)}
+.line b{font-weight:600}
+.line em{color:var(--stage-dim);font-style:italic}
+.line code{font-size:12px;padding:1px 6px;border-radius:4px;background:var(--stage-line);color:#F2C9A0}
+.who-narrator{color:#CDBFA9}.who-protima{color:#F2C9A0}.who-shom{color:#9FD3CF}
+.stage-foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--stage-line);font-size:13px;color:var(--stage-dim);display:flex;gap:18px;flex-wrap:wrap}
+.stage-foot span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:6px;vertical-align:1px;background:currentColor}
+@media (max-width:640px){ .line{grid-template-columns:1fr;gap:2px} .stage{padding:18px} .time{margin-left:0;width:100%} }
+
+section{padding:72px 0}
+section h2{font-size:clamp(32px,4.2vw,48px);margin:10px 0 16px;max-width:20ch}
+section p.sub{color:var(--ink-2);max-width:62ch;margin:0 0 36px}
+
+/* before / after */
+.ba{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.page{background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:26px 28px;box-shadow:var(--shadow)}
+.page .eyebrow{display:flex;justify-content:space-between;gap:10px;margin-bottom:12px}
+.page p{margin:0 0 14px;font-family:'Fraunces',Georgia,serif;font-size:17.5px;line-height:1.65;font-weight:500}
+.page mark{background:var(--mark);color:inherit;padding:0 3px;border-radius:3px}
+.page.before mark{background:transparent;text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px}
+@media (max-width:820px){ .ba{grid-template-columns:1fr} }
+
+/* change log */
+.log{margin-top:28px;border:1px solid var(--rule);border-radius:16px;overflow:hidden;background:var(--card)}
+.log-row{display:grid;grid-template-columns:110px minmax(0,1fr) minmax(0,1fr) minmax(0,1.4fr);gap:16px;padding:14px 20px;border-top:1px solid var(--rule);font-size:15px;align-items:start}
+.log-row:first-child{border-top:0;background:var(--paper-2);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.kind{justify-self:start;font-size:12px;font-weight:600;padding:3px 9px;border-radius:6px;background:var(--teal-soft);color:var(--teal)}
+.from{color:var(--ink-3)} .to{font-weight:600} .why{color:var(--ink-2)}
+@media (max-width:820px){ .log-row{grid-template-columns:1fr;gap:4px} .log-row:first-child{display:none} }
+
+/* pipeline */
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;counter-reset:s}
+.step{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:20px;counter-increment:s}
+.step::before{content:counter(s,decimal-leading-zero);font:500 13px 'IBM Plex Mono',monospace;color:var(--accent)}
+.step h3{font-size:21px;margin:8px 0 6px}
+.step p{margin:0;font-size:15px;color:var(--ink-2);line-height:1.5}
+.step code{font-size:12.5px;background:var(--sand);padding:1px 5px;border-radius:4px}
+@media (max-width:960px){ .steps{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:560px){ .steps{grid-template-columns:1fr} }
+
+/* facts */
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:36px}
+.fact{border-top:2px solid var(--ink);padding-top:14px}
+.fact b{display:block;font-family:'Fraunces',serif;font-size:40px;font-weight:600;line-height:1}
+.fact span{font-size:14px;color:var(--ink-2)}
+@media (max-width:820px){ .facts{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.eng{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 40px}
+.eng div{padding:16px 0;border-top:1px solid var(--rule)}
+.eng h3{font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:600;letter-spacing:0;margin:0 0 4px}
+.eng p{margin:0;font-size:15px;color:var(--ink-2)}
+@media (max-width:720px){ .eng{grid-template-columns:1fr} }
+
+/* quickstart */
+pre{background:var(--stage);color:var(--stage-ink);border-radius:14px;padding:22px 24px;overflow:auto;font-size:14px;line-height:1.7;margin:0}
+pre .c{color:var(--stage-dim)} pre .k{color:#F2C9A0}
+.consent{margin-top:28px;display:flex;gap:16px;padding:20px 22px;border-radius:14px;background:var(--accent-soft);color:var(--ink)}
+.consent svg{flex-shrink:0;margin-top:2px}
+.consent p{margin:0;font-size:15px}
+
+footer{border-top:1px solid var(--rule);padding:36px 0 56px;color:var(--ink-3);font-size:14px}
+footer .wrap{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+footer .right{margin-left:auto}
+</style>
+</head>
+<body>
+
+<nav aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="bn" lang="bn">কথা</span><b>Katha Studio</b></a>
+    <div class="links">
+      <a class="hide-sm" href="#listen">Listen</a>
+      <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#start">Quickstart</a>
+      <a class="btn btn-ghost" href="https://github.com/Shraman123/KathaStudio">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="eyebrow">Story → culturally adapted → voiced audio drama</div>
+    <h1 style="margin-top:14px">Adaptation, <em>not</em> translation.</h1>
+    <p class="lede">Give Katha an English story. It rewrites the names, places, food, festivals and idioms so the story feels native to a Bengali listener, keeps every plot beat exactly, turns it into an audio-drama script, and performs it with a designed voice for each character on Gemini 3.8 Flash TTS.</p>
+    <div class="ctas">
+      <a class="btn btn-primary" href="#listen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+        Listen to a scene</a>
+      <a class="btn btn-ghost" href="https://github.com/Shraman123/KathaStudio">View the code</a>
+    </div>
+    <div class="swap" aria-label="Title adaptation">
+      <s>The Last Pie</s><span aria-hidden="true">→</span><strong>The Last Bowl</strong>
+    </div>
+  </div>
+</header>
+
+<main>
+<div class="wrap" id="listen">
+  <div class="stage" role="region" aria-label="Audio drama player">
+    <div class="stage-head">
+      <button class="play" id="play" type="button" aria-label="Play scene">
+        <svg id="icon-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+        <svg id="icon-pause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+      </button>
+      <div class="stage-title">
+        <b>Scene 1 · The Silent Kitchen</b>
+        <span>The Last Bowl · rendered by the pipeline, unedited</span>
+      </div>
+      <div class="time" id="time" aria-live="off">0:00 / 0:58</div>
+    </div>
+    <div class="wave" id="wave" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="58" aria-valuenow="0"></div>
+    <div class="lines" id="lines"></div>
+    <div class="stage-foot">
+      <span class="who-narrator">Narrator · designed voice</span>
+      <span class="who-protima">Protima · designed voice</span>
+      <span class="who-shom">Shom · library voice (Google won't design child voices)</span>
+    </div>
+    <audio id="audio" src="assets/the-last-bowl-scene1.mp3" preload="metadata"></audio>
+  </div>
+</div>
+
+<section aria-labelledby="ba-h">
+  <div class="wrap">
+    <div class="eyebrow">Same beats, new world</div>
+    <h2 id="ba-h">A Vermont pie contest becomes a Poush Mela payesh rivalry.</h2>
+    <p class="sub">The source is an original short story set in small-town Vermont. Katha chose every substitution below itself and logged a reason for each. The grief, the rival, the lost ingredient and the ending are untouched.</p>
+    <div class="ba">
+      <article class="page before">
+        <div class="eyebrow"><span>Source</span><span>English · Vermont</span></div>
+        <p>Every November, the town of <mark>Maple Hollow, Vermont</mark>, held its <mark>Harvest Fair</mark> on the village green, and every November for thirty-one years, <mark>Martha Quinn</mark>'s <mark>apple pie</mark> won the <mark>blue ribbon</mark>.</p>
+        <p>This year, Martha was not sure she would bake at all. Her husband, <mark>Walt</mark>, had died in March. It was Walt who <mark>peeled the apples</mark> in one long, unbroken curl, and Walt who <mark>hummed off-key</mark> while the crust browned.</p>
+      </article>
+      <article class="page after">
+        <div class="eyebrow"><span>Adapted</span><span>Bengali, West Bengal</span></div>
+        <p>Every November, the town of <mark>Shantiniketan</mark> held its annual <mark>Poush Mela</mark> on the village grounds, and for thirty-one years, <mark>Protima-di</mark>’s <mark>Nolen Gurer Payesh</mark> had won the <mark>first prize</mark>.</p>
+        <p>This year, Protima was not sure she would cook at all. Her husband, <mark>Dadu</mark>, had passed away in March. It was Dadu who would <mark>carefully grate the fresh date-palm jaggery</mark> into the simmering milk, and Dadu who would <mark>hum Tagore songs off-key</mark> while the rice softened.</p>
+      </article>
+    </div>
+
+    <div class="log" role="table" aria-label="Adaptation change log">
+      <div class="log-row" role="row"><span role="columnheader">Kind</span><span role="columnheader">Original</span><span role="columnheader">Adapted</span><span role="columnheader">Why (the model's reason)</span></div>
+      <div class="log-row" role="row"><span class="kind" role="cell">food</span><span class="from" role="cell">Apple pie</span><span class="to" role="cell">Nolen gurer payesh</span><span class="why" role="cell">Bengal's iconic winter dessert, built on seasonal date-palm jaggery</span></div>
+      <div class="log-row" role="row"><span class="kind" role="cell">place</span><span class="from" role="cell">Maple Hollow · Harvest Fair</span><span class="to" role="cell">Shantiniketan · Poush Mela</span><span class="why" role="cell">A town known for its arts and its winter fair</span></div>
+      <div class="log-row" role="row"><span class="kind" role="cell">food</span><span class="from" role="cell">Pecan pie (the rival's)</span><span class="to" role="cell">Chaler payesh</span><span class="why" role="cell">The rival dessert in a local contest</span></div>
+      <div class="log-row" role="row"><span class="kind" role="cell">character</span><span class="from" role="cell">Martha · Walt · Sam</span><span class="to" role="cell">Protima · Dadu · Shom</span><span class="why" role="cell">Bengali names and kinship terms: Didima, Dadu, Haren-kaku</span></div>
+      <div class="log-row" role="row"><span class="kind" role="cell">object</span><span class="from" role="cell">Black pepper (the secret)</span><span class="to" role="cell">Crushed green fennel</span><span class="why" role="cell">A surprising aromatic that cuts richness in Bengali sweets</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="how" aria-labelledby="how-h" style="background:var(--paper-2)">
+  <div class="wrap">
+    <div class="eyebrow">Pipeline</div>
+    <h2 id="how-h">Seven stages and a studio. Each stage reruns on its own.</h2>
+    <p class="sub">Every stage writes its output to disk. You can inspect the change log before any audio is made, edit a line in the script and re-render only that chunk, or stop halfway and pick up tomorrow.</p>
+    <div class="steps">
+      <div class="step"><h3>Ingest</h3><p>Splits on chapters, then paragraphs, to fit the model's context. A <b>story bible</b> keeps names consistent from the first chunk to the last.</p></div>
+      <div class="step"><h3>Adapt</h3><p>Rewrites for the target culture. Foreign elements central to the plot must get a native equivalent with the same function. Every change is logged.</p></div>
+      <div class="step"><h3>Script</h3><p>Scenes of <code>{speaker, text, style, tags}</code>. Spoken text is verbatim; stage directions are rejected. Every plot beat must be covered.</p></div>
+      <div class="step"><h3>Cast</h3><p>A designed voice per character from its description, with previews. Voice ids are cached and never recreated.</p></div>
+      <div class="step"><h3>Render</h3><p>Plans requests around API rules: designed voices one turn at a time, prebuilt voices two speakers per request.</p></div>
+      <div class="step"><h3>Stitch</h3><p>300 ms between lines, 1 s between scenes, each chunk matched to the same loudness, −1 dBFS ceiling. Exports MP3 + WAV.</p></div>
+      <div class="step"><h3>Report</h3><p>What changed and why, the cast, durations, API calls, cost at paid rates, and whether it fits the free tier.</p></div>
+      <div class="step"><h3>Studio</h3><p>A Gradio UI for the whole flow: upload, pick culture and language, preview voices, render, play, download.</p></div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="eng-h">
+  <div class="wrap">
+    <div class="eyebrow">Engineering</div>
+    <h2 id="eng-h">Built against the real API, not the brochure.</h2>
+    <p class="sub">Gemini 3.8 Flash TTS shipped in September 2026. Every request shape was checked against the docs and then against live calls; what we learned is written up in <a href="https://github.com/Shraman123/KathaStudio/blob/main/API_NOTES.md">API_NOTES.md</a>.</p>
+    <div class="facts">
+      <div class="fact"><b>$0.0135</b><span>per minute of audio at paid rates (25 audio tokens/s)</span></div>
+      <div class="fact"><b>27 → 11</b><span>TTS requests for this story, designed vs prebuilt voices</span></div>
+      <div class="fact"><b>55</b><span>tests with every API mocked, from chunking to stitching</span></div>
+      <div class="fact"><b>2 / 2</b><span>spot-checked chunks transcribed back to the exact scripted line</span></div>
+    </div>
+    <div class="eng">
+      <div><h3>Self-repairing structured output</h3><p>Adaptations and scripts are pydantic-validated. When the model breaks a rule, its own errors go back to it once for a fix.</p></div>
+      <div><h3>Quota-aware by design</h3><p>The free tier allows about 10 TTS requests a day. Daily-quota errors stop cleanly instead of retrying pointlessly, and the render resumes tomorrow.</p></div>
+      <div><h3>Resumable, fingerprinted chunks</h3><p>Each audio chunk is fingerprinted by its text, style and voice. Change one line and only that chunk is re-rendered.</p></div>
+      <div><h3>Swappable writer</h3><p>Gemini 3.8 Flash by default (free tier), with an automatic fallback model. Claude is one flag away: <code>--llm claude</code>.</p></div>
+      <div><h3>Safety-respecting fallbacks</h3><p>Google refuses to design child voices. Katha gives those characters a library voice and never prompts around the policy.</p></div>
+      <div><h3>Honest cost reports</h3><p>Prices live in config, not code. Every episode's report shows paid-rate cost and whether the run fits the free tier.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="start" aria-labelledby="start-h" style="padding-top:24px">
+  <div class="wrap">
+    <div class="eyebrow">Quickstart</div>
+    <h2 id="start-h">Your story, in five commands.</h2>
+    <pre><code><span class="c"># Python 3.11+, a Gemini API key in .env</span>
+<span class="k">git clone</span> https://github.com/Shraman123/KathaStudio && cd KathaStudio
+<span class="k">pip install</span> -e ".[ui]"
+<span class="k">katha all</span> samples/the_last_pie.md --culture "Bengali, West Bengal" --lang en --dry-run
+<span class="k">katha all</span> samples/the_last_pie.md --culture "Bengali, West Bengal" --lang en
+<span class="k">katha ui</span>          <span class="c"># or use the studio in your browser</span></code></pre>
+    <div class="consent" role="note">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17.5v.01"/></svg>
+      <p><b>Narrate in your own voice, and only your own.</b> Katha can replicate a narrator voice from a 10–30 s clip plus a recorded consent statement from the same speaker. Only replicate your own voice or one whose owner has given explicit, recorded consent.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><span class="bn" lang="bn" style="color:var(--accent)">কথা</span> Katha Studio · original sample story, CC0</span>
+    <a href="https://github.com/Shraman123/KathaStudio">Source on GitHub</a>
+    <span class="right">Voices: Gemini 3.8 Flash TTS</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var audio = document.getElementById('audio');
+  var playBtn = document.getElementById('play');
+  var iconPlay = document.getElementById('icon-play');
+  var iconPause = document.getElementById('icon-pause');
+  var wave = document.getElementById('wave');
+  var linesEl = document.getElementById('lines');
+  var timeEl = document.getElementById('time');
+  var data = null, bars = [], rows = [];
+
+  function fmt(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  function esc(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+  function build(d) {
+    data = d;
+    var frag = document.createDocumentFragment();
+    d.peaks.forEach(function (p) {
+      var i = document.createElement('i');
+      i.style.height = Math.max(4, Math.round(p * 100)) + '%';
+      frag.appendChild(i); bars.push(i);
+    });
+    wave.appendChild(frag);
+    d.segments.forEach(function (s) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'line';
+      var text = esc(s.text).replace(/&lt;([a-z -]+)&gt;/g, '<code>&lt;$1&gt;</code>');
+      b.innerHTML = '<b class="who-' + s.speaker + '">' + esc(s.name.replace('-di', '')) + '</b><span>' +
+        (s.style ? '<em>' + esc(s.style) + ' · </em>' : '') + text + '</span>';
+      b.setAttribute('aria-label', 'Play from: ' + s.name + ', ' + s.text.replace(/<[^>]+>/g, ''));
+      b.addEventListener('click', function () { audio.currentTime = s.start + 0.01; audio.play(); });
+      linesEl.appendChild(b); rows.push(b);
+    });
+    timeEl.textContent = '0:00 / ' + fmt(d.duration);
+  }
+
+  function update() {
+    if (!data) return;
+    var t = audio.currentTime, dur = audio.duration || data.duration;
+    var n = Math.round(t / dur * bars.length);
+    for (var i = 0; i < bars.length; i++) bars[i].classList.toggle('on', i < n);
+    rows.forEach(function (r, i) { var s = data.segments[i]; r.classList.toggle('active', t >= s.start && t < s.end + 0.3); });
+    timeEl.textContent = fmt(t) + ' / ' + fmt(dur);
+    wave.setAttribute('aria-valuenow', Math.round(t));
+  }
+
+  function setPlaying(p) {
+    iconPlay.hidden = p; iconPause.hidden = !p;
+    playBtn.setAttribute('aria-label', p ? 'Pause scene' : 'Play scene');
+  }
+
+  playBtn.addEventListener('click', function () { audio.paused ? audio.play() : audio.pause(); });
+  audio.addEventListener('play', function () { setPlaying(true); });
+  audio.addEventListener('pause', function () { setPlaying(false); });
+  audio.addEventListener('ended', function () { setPlaying(false); });
+  audio.addEventListener('timeupdate', update);
+
+  function seekFrom(e) {
+    var r = wave.getBoundingClientRect();
+    var x = Math.min(Math.max(0, (e.clientX - r.left) / r.width), 1);
+    audio.currentTime = x * (audio.duration || (data && data.duration) || 0);
+    update();
+  }
+  wave.addEventListener('pointerdown', function (e) { seekFrom(e); });
+  wave.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') { audio.currentTime += 5; update(); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { audio.currentTime -= 5; update(); e.preventDefault(); }
+    if (e.key === ' ' || e.key === 'Enter') { audio.paused ? audio.play() : audio.pause(); e.preventDefault(); }
+  });
+
+  fetch('assets/scene1.json').then(function (r) { return r.json(); }).then(build).catch(function () {
+    linesEl.textContent = 'Transcript unavailable.';
+  });
+})();
+</script>
+</body>
+</html>

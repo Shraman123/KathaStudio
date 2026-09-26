@@ -2,6 +2,8 @@
 
 **Story → culturally adapted → voiced audio drama.**
 
+**Live page, with a playable scene:** https://katha-studio-self.vercel.app
+
 Katha Studio takes a long-form English story and gives it to a new audience the way a good editor would: through **adaptation, not translation**. Names, places, food, festivals, idioms and social texture change so the story feels native. The plot beats, the emotional arc and the ending stay exactly the same. The adapted story then becomes a multi-character audio-drama script and is performed by **Gemini 3.8 Flash TTS**, with a designed voice for every character.
 
 The default target is a Bengali-speaking audience in West Bengal. Spoken output can be Indian English, Hindi or Bengali.

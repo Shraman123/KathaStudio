@@ -97,3 +97,14 @@ client.voices.create(store=True, voice={
 3. No manual header handling: stitching reads the WAVs directly.
 4. The `--narrator-clip` check is 10–30 s. The consent clip is checked for length and format only; we can't verify who is speaking. The consent warning goes in the code, the CLI and the README.
 5. **Local env: `ffmpeg` is not installed.** It's needed for pydub's MP3 export. Install with `winget install Gyan.FFmpeg` before M4.
+
+## Confirmed live (2026-09-26, with a real key)
+- `interactions.create` with a `response_format` JSON schema works on `gemini-3.8-flash`; the result is in `.output_text`. Usage fields: `usage.total_input_tokens`, `total_output_tokens`, `total_thought_tokens`.
+- **Free-tier daily limit for `gemini-3.8-flash` is 20 requests/day.** Found from the 429 text: "limit: 20 requests per day on Free Tier". `gemini-3.1-flash-lite` has a separate quota and works as a fallback, but it's slow (about 2–3 min per call).
+- `gemini-3.8-flash-lite` does **not** exist (404). The lite text model is `gemini-3.1-flash-lite`.
+- The SDK logs "Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY" at client init, but an explicit `api_key=` still takes precedence (`self.api_key = api_key or env_api_key`).
+- `voices.create(type="prompted")` works and returns `voice_…` ids plus a 40–50 s preview WAV.
+- **Voice design for a 12-year-old character was refused**: `400 "Voice prompt was blocked by safety policies."` We fall back to a library voice and never re-prompt around the policy.
+- `voices.list(language_code=["en-IN"], gender=[…], type_=["prebuilt"])` returns library ids such as `en-in-advisor-1`.
+- TTS unary responses are WAV at 24 kHz, mono, 16-bit, as documented. 7 single-speaker requests took 5–60 s each. Gemini transcribed the rendered chunks back to exactly the scripted lines.
+- Designed voices sounded younger than described ("late 60s" came out like 30s), so the design prompt now leads with the age.

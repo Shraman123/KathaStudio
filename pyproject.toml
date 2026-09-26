@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "katha-studio"
+version = "0.1.0"
+description = "Story → culturally adapted → voiced audio drama, with Gemini 3.8 Flash TTS"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "google-genai>=2.25.0",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "typer>=0.12",
+    "pydub>=0.25.1",
+]
+
+[project.optional-dependencies]
+claude = ["anthropic>=1.0"]
+ui = ["gradio>=5.0"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+katha = "katha.cli:app"
+
+[tool.setuptools]
+packages = ["katha"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

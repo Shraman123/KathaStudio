@@ -253,3 +253,12 @@ def test_script_repairs_skipped_plot_beat(cfg):
     assert "1. she bakes" in fb.prompts[0] and "2. she wins" in fb.prompts[0]
     assert "plot beats [2] are not dramatised" in fb.prompts[1]
     assert [x.id for x in s.scenes] == ["scene_01", "scene_02"]
+
+
+def test_dry_run_warns_when_over_free_tier(cfg):
+    s = make_script([["narrator", "a", "b"] * 5])
+    cfg.pricing.free_tier_rpd = {cfg.tts.model: 10}
+    msg = estimate_script(s, cfg).summary(cfg)
+    assert "exceed the free tier's ~10/day" in msg and "--voice-mode prebuilt" in msg
+    cfg.tts.voice_mode = "prebuilt"
+    assert "exceed" not in estimate_script(s, cfg).summary(cfg)   # 6 requests fit

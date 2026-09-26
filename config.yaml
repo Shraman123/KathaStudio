@@ -44,9 +44,10 @@ pricing:
     gemini-3.8-flash:          {input: 0.75, output: 3.75}
   free_tier: true            # set to false if billing is enabled on your key
   # Free-tier requests/day. Only numbers we have actually observed; the docs don't publish them.
-  # gemini-3.8-flash: 20/day (from a 429 error message, 2026-09-26). Add TTS once known.
+  # Both come from 429 error messages seen on 2026-09-26.
   free_tier_rpd:
     gemini-3.8-flash: 20
+    gemini-3.8-flash-tts: 10   # 429 text said "10 requests per day on Free Tier" (12 got through that day)
 
 estimate:
   words_per_minute: {en: 150, hi: 140, bn: 130}   # speaking rate used by --dry-run

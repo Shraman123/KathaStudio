@@ -26,7 +26,9 @@ from . import script as script_mod
 from . import stitch as stitch_mod
 from . import voices as voices_mod
 from .config import Config, ConfigError, load_config, load_env, mask
+from .llm import LLMOutputError
 from .log import setup_logging
+from .retry import QuotaExhausted
 from .models import Adaptation
 from .runs import RunDir
 
@@ -56,6 +58,8 @@ state = State()
 def main(
     config: Path = typer.Option(None, "--config", help="Path to config.yaml"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
+    voice_mode: Optional[str] = typer.Option(
+        None, "--voice-mode", help="designed (best quality, 1 request per turn) | prebuilt (2-speaker requests, fewer calls)"),
 ):
     # Windows consoles default to cp1252; stories and scripts contain Bengali/Devanagari and symbols
     for stream in (sys.stdout, sys.stderr):
@@ -65,6 +69,9 @@ def main(
     load_env()
     try:
         state.cfg = load_config(config)
+        if voice_mode:
+            state.cfg.tts = state.cfg.tts.model_copy(update={"voice_mode": voice_mode})
+            type(state.cfg.tts).model_validate(state.cfg.tts.model_dump())
     except (ConfigError, ValueError) as e:
         typer.secho(f"Config error: {e}", fg="red", err=True)
         raise typer.Exit(1)
@@ -77,7 +84,14 @@ def _run(stage: str, fn, *args, **kwargs):
     except NotImplementedError as e:
         typer.secho(f"[{stage}] not implemented yet: {e}", fg="yellow", err=True)
         raise typer.Exit(2)
-    except (ConfigError, FileNotFoundError) as e:
+    except (ConfigError, FileNotFoundError, ValueError) as e:
+        typer.secho(f"[{stage}] {e}", fg="red", err=True)
+        raise typer.Exit(1)
+    except QuotaExhausted as e:
+        typer.secho(f"[{stage}] {str(e).split(' API said:')[0]}", fg="yellow", err=True)
+        typer.secho("Everything finished so far is saved. Rerun the same command later to resume.", err=True)
+        raise typer.Exit(3)
+    except LLMOutputError as e:
         typer.secho(f"[{stage}] {e}", fg="red", err=True)
         raise typer.Exit(1)
 
@@ -199,8 +213,9 @@ def doctor():
     typer.echo(f"runs_dir      {cfg.paths.runs_dir}")
     typer.echo(f"GEMINI_API_KEY    {mask(os.environ.get('GEMINI_API_KEY'))}")
     typer.echo(f"ANTHROPIC_API_KEY {mask(os.environ.get('ANTHROPIC_API_KEY'))}")
-    ff = shutil.which("ffmpeg")
-    typer.echo(f"ffmpeg        {ff or 'NOT FOUND (needed for MP3 export: winget install Gyan.FFmpeg)'}")
+    from .stitch import find_ffmpeg
+    ff = find_ffmpeg()
+    typer.echo(f"ffmpeg        {ff or 'NOT FOUND (needed for MP3 export: pip install imageio-ffmpeg)'}")
 
 
 if __name__ == "__main__":

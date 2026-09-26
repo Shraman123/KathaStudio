@@ -93,7 +93,18 @@ class Estimate:
                 f"estimated audio ≈ {m}m{s:02d}s → {self.audio_tokens:,} audio tokens\n"
                 f"estimated TTS cost at paid rates ≈ ${self.tts_cost_usd:.4f} ({cfg.tts.model}); {tier}\n"
                 f"at {cfg.rate_limit.requests_per_minute:g} RPM, synthesis takes ≥ "
-                f"{self.requests / cfg.rate_limit.requests_per_minute:.1f} min")
+                f"{self.requests / cfg.rate_limit.requests_per_minute:.1f} min"
+                + self._quota_note(cfg))
+
+    def _quota_note(self, cfg: Config) -> str:
+        rpd = cfg.pricing.free_tier_rpd.get(cfg.tts.model)
+        if not (cfg.pricing.free_tier and rpd and self.requests > rpd):
+            return ""
+        days = -(-self.requests // rpd)
+        tip = (" Try --voice-mode prebuilt (2-speaker requests) to cut the count."
+               if cfg.tts.voice_mode == "designed" else "")
+        return (f"\n⚠ {self.requests} requests exceed the free tier's ~{rpd}/day for {cfg.tts.model}: "
+                f"about {days} days of quota (render resumes each day), or enable billing.{tip}")
 
 
 def estimate_script(script: Script, cfg: Config, max_scenes: int | None = None) -> Estimate:
@@ -146,7 +157,8 @@ def load_manifest(run: RunDir) -> dict:
 
 
 def render_script(run: RunDir, script: Script, cast: "VoiceCast", cfg: Config, tts,
-                  max_scenes: int | None = None) -> dict:
+                  max_scenes: int | None = None, on_progress=None) -> dict:
+    """on_progress(done, total, key), if given, is called after each chunk (the UI uses it)."""
     run.ensure()
     reqs = plan_requests(script, cfg.tts.voice_mode, max_scenes)
     manifest = load_manifest(run)
@@ -158,6 +170,8 @@ def render_script(run: RunDir, script: Script, cast: "VoiceCast", cfg: Config, t
         entry = manifest.get(req.key)
         if entry and entry.get("fingerprint") == fp and wav_seconds(out):
             stats["skipped"] += 1
+            if on_progress:
+                on_progress(n, len(reqs), req.key)
             continue
         scene = scenes[req.scene_id]
         segments = [Segment(scene.lines[i].speaker, scene.lines[i].text, scene.lines[i].style)
@@ -176,6 +190,8 @@ def render_script(run: RunDir, script: Script, cast: "VoiceCast", cfg: Config, t
                              "fingerprint": fp, "seconds": round(secs, 2)}
         _save_manifest(run, manifest)  # after every chunk, so a crash loses at most one
         stats["synthesized"] += 1
+        if on_progress:
+            on_progress(n, len(reqs), req.key)
         log.info("chunk rendered", extra=kv(n=f"{n}/{len(reqs)}", key=req.key,
                                            speakers="+".join(req.speakers), secs=f"{secs:.1f}"))
     # Keep only the keys in the current plan, in order
@@ -191,7 +207,7 @@ def _save_manifest(run: RunDir, manifest: dict) -> None:
     tmp.replace(p)
 
 
-def render(run: RunDir, cfg: Config, *, max_scenes: int | None = None, tts=None) -> dict:
+def render(run: RunDir, cfg: Config, *, max_scenes: int | None = None, tts=None, on_progress=None) -> dict:
     from .voices import load_cast
 
     script = Script.model_validate_json(run.require(run.script, "script").read_text(encoding="utf-8"))
@@ -203,7 +219,7 @@ def render(run: RunDir, cfg: Config, *, max_scenes: int | None = None, tts=None)
     if tts is None:
         from .tts import GeminiTTS
         tts = GeminiTTS(cfg)
-    stats = render_script(run, script, cast, cfg, tts, max_scenes)
+    stats = render_script(run, script, cast, cfg, tts, max_scenes, on_progress)
     stats["max_scenes"] = max_scenes
     (run.root / "render_stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
     log.info("render done", extra=kv(synthesized=stats["synthesized"], skipped=stats["skipped"],

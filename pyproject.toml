@@ -15,6 +15,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "typer>=0.12",
     "pydub>=0.25.1",
+    "imageio-ffmpeg>=0.5",  # bundled ffmpeg for MP3 export; no system install needed
 ]
 
 [project.optional-dependencies]

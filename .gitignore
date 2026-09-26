@@ -10,3 +10,4 @@ runs_m3.log
 runs_m4.log
 ui.log
 .vercel
+runs_*.log

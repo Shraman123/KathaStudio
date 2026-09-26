@@ -41,7 +41,7 @@ haren               I almost did not enter. It did not feel right, winning again
 protima             Dadu would have hated that, Haren. He loved watching you lose!
 ```
 
-**Audio.** 4 voices were cast (3 designed, 1 library) and 24 of the episode's 30 chunks are rendered (11 on the lite TTS fallback): at 24 kHz mono. The rest is waiting on the free-tier daily TTS quota (see [costs](#costs--free-tier)); `katha render runs/the-last-pie` picks up where it stopped. As a spot check, Gemini transcribed two rendered chunks back to exactly the scripted lines.
+**Audio.** 4 voices were cast (3 designed, 1 library) and 24 of the episode's 30 chunks are rendered at 24 kHz mono (10 of them on the lite TTS fallback). The rest is waiting on the free-tier daily TTS quota (see [costs](#costs--free-tier)); `katha render runs/the-last-pie` picks up where it stopped. As a spot check, Gemini transcribed two rendered chunks back to exactly the scripted lines.
 
 > **Studio UI.** The Gradio app (`katha ui`) was designed first on a Claude Design canvas. Its three columns follow the pipeline: **Story** (upload, culture, language, estimate) → **Adaptation** (change log, script, report) → **Cast & render** (voice cards with previews, render progress, player and downloads).
 
